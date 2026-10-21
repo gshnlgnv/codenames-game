@@ -68,7 +68,7 @@ export class PageP2PLobbyComponent implements OnInit, OnDestroy {
             .subscribe(id => {
                 this.peerId = id;
                 if (id) {
-                    this.hostStatus = 'Room created. Share the Room ID with other players.';
+                    this.hostStatus = 'Комната создана. Поделись ID комнаты с другими участниками.';
                     this.hostReady = true;
                     this.generateQrCode(id);
                 }
