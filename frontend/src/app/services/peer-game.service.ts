@@ -81,6 +81,14 @@ export class PeerGameService implements OnDestroy {
 
     // ── Public state ──────────────────────────────────────────────────────────
 
+    private peerOptions = {
+        host: '89.108.66.21',
+        port: 80,
+        path: '/myapp',
+        secure: false,
+        debug: 2
+    };
+
     /** Current game state (null until connected/started). */
     game$ = new BehaviorSubject<P2PGameState | null>(null);
 
@@ -126,7 +134,7 @@ export class PeerGameService implements OnDestroy {
         this.destroyPeer();
 
         const roomId = generateRoomId();
-        this.peer = new Peer(roomId);
+        this.peer = new Peer(roomId, this.peerOptions);
 
         this.peer.on('open', (id) => {
             this.localPeerId$.next(id);
@@ -157,7 +165,7 @@ export class PeerGameService implements OnDestroy {
         this.status$.next('connecting');
         this.destroyPeer();
 
-        this.peer = new Peer();
+        this.peer = new Peer(this.peerOptions);
 
         this.peer.on('open', () => {
             this.hostConn = this.peer!.connect(hostPeerId, { reliable: true });
