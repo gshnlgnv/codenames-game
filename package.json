@@ -11,5 +11,11 @@
     "docker": "docker build -t codenames-game dist",
     "build-docker": "npm run build && npm run docker",
     "start": "env NODE_ENV=production node ./dist/server/main.js"
+  },
+  "dependencies": {
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5"
   }
 }
