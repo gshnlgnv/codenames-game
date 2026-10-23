@@ -34,8 +34,12 @@ export class AppRoutingNavigationService {
         this.router.navigate(['p2p', 'lobby']);
     }
 
-    toP2PBoard() {
-        this.router.navigate(['p2p', 'board']);
+    toP2PBoard(playerName?: string) {
+        if (playerName) {
+            this.router.navigate(['p2p', 'board'], { queryParams: { name: playerName } });
+        } else {
+            this.router.navigate(['p2p', 'board']);
+        }
     }
 
     toError(code: number) {

@@ -27,6 +27,10 @@ export type P2PMessage =
     | { type: 'state_update'; state: P2PGameState }
     | { type: 'reveal_card'; cardIndex: number }
     | { type: 'send_hint'; hint: string; count: number }
-    | { type: 'end_turn' };
+    | { type: 'end_turn' }
+    | { type: 'PLAYER_JOIN'; name: string }
+    | { type: 'PLAYERS_UPDATE'; players: { name: string, isHost: boolean }[] }
+    | { type: 'PLAYERS_UPDATE'; players: { name: string, isHost: boolean }[] }
+    | { type: 'ROLES_ASSIGNED'; players: { name: string, isHost: boolean, role: 'spymaster' | 'operative', team: 'blue' | 'red' }[] };
 
 export type P2PRole = 'spymaster' | 'operative';

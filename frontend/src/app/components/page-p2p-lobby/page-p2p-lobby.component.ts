@@ -33,7 +33,8 @@ export class PageP2PLobbyComponent implements OnInit, OnDestroy {
     // Host flow
     wordLists: WordList[] = WORD_LISTS;
     selectedWordListIndex = Math.max(0, WORD_LISTS.findIndex(l => l.id === 'english-standard'));
-    hostRole: P2PRole = 'spymaster';
+    hostName = ''; // <-- ДОБАВИЛИ ИМЯ ХОСТА
+    // hostRole: P2PRole = 'spymaster';
     hostStatus = '';
     peerId: string | null = null;
     hostWaiting = false;
@@ -41,8 +42,9 @@ export class PageP2PLobbyComponent implements OnInit, OnDestroy {
     qrCodeDataUrl: string | null = null;
 
     // Join flow
+    joinName = ''; // <-- ДОБАВИЛИ ИМЯ ГОСТЯ
     peerIdControl = new FormControl('', [Validators.required, Validators.minLength(3)]);
-    joinRole: P2PRole = 'operative';
+    // joinRole: P2PRole = 'operative';
     joinStatus = '';
     joinConnecting = false;
 
@@ -107,23 +109,30 @@ export class PageP2PLobbyComponent implements OnInit, OnDestroy {
     // ── Host actions ──────────────────────────────────────────────────────────
 
     onCreateRoomClick() {
+        if (!this.hostName.trim()) return; // Защита от пустого имени
+        localStorage.setItem('playerName', this.hostName.trim()); // Сохраняем имя
+
         this.hostStatus = 'Opening room…';
         this.hostWaiting = true;
-        this.peerService.initAsHost(this.selectedWordListIndex, this.hostRole);
+        // Убрали this.hostRole, так как роли больше нет
+        this.peerService.initAsHost(this.selectedWordListIndex);
     }
 
     onHostStartGameClick() {
-        this.navigation.toP2PBoard();
+        this.navigation.toP2PBoard(this.hostName.trim());
     }
 
     // ── Join actions ──────────────────────────────────────────────────────────
 
     onJoinClick() {
-        if (this.peerIdControl.invalid) return;
+        if (this.peerIdControl.invalid || !this.joinName.trim()) return;
+        localStorage.setItem('playerName', this.joinName.trim());  // Сохраняем имя
+
         const hostId = this.peerIdControl.value.trim();
         this.joinStatus = 'Connecting…';
         this.joinConnecting = true;
-        this.peerService.joinAsGuest(hostId, this.joinRole);
+        // Убрали this.joinRole
+        this.peerService.joinAsGuest(hostId);
     }
 
     // ── Misc ──────────────────────────────────────────────────────────────────

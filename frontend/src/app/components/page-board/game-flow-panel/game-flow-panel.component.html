@@ -15,7 +15,7 @@
     </div>
 
     <div class="spymaster-controls" *ngIf="playerType == SPYMASTER">
-        <div class="mat-h3">Send Clue</div>
+        <div class="mat-h3">Отправить подсказку</div>
 
         <app-spymaster-hint-input class="hint-input"
             [side]="nextHintSide"
@@ -27,7 +27,7 @@
             (click)="onSendClick()"
             [class.send-button-blue]="nextHintSide == BLUE"
             [class.send-button-red]="nextHintSide == RED">
-            Send
+            Отправить
         </button>
     </div>
 </div>

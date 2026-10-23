@@ -2,6 +2,7 @@ import {
     AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef,
     Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { FormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -34,6 +35,7 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
         private navigation: AppRoutingNavigationService,
         private snackBar: MatSnackBar,
         private dialog: MatDialog,
+        private route: ActivatedRoute,
         private cd: ChangeDetectorRef) {}
 
     @ViewChild('container') boardView: ElementRef<HTMLDivElement>;
@@ -42,12 +44,16 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     game: P2PGameState | null = null;
     cardFontSize = 0;
+    players: { name: string, isHost: boolean, role?: 'spymaster' | 'operative', team?: 'blue' | 'red' }[] = [];
 
     // ── Role / identity ───────────────────────────────────────────────────────
 
     /** Local, non-synced role. Controls whether card colours are shown. */
     get isSpymaster(): boolean { return this.peerService.role === 'spymaster'; }
     get isHost(): boolean      { return this.peerService.isHost; }
+
+    myRole: 'spymaster' | 'operative' | null = null;
+    myTeam: 'blue' | 'red' | null = null;
 
     // ── Hint input (spymasters only) ──────────────────────────────────────────
 
@@ -65,12 +71,15 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     SIDE_BLUE      = Side.BLUE;
     SIDE_ASSASSIN  = Side.ASSASSIN;
     SIDE_NEUTRAL   = Side.NEUTRAL;
+    myName = '';
 
     private destroy$ = new Subject<void>();
 
     // ─────────────────────────────────────────────────────────────────────────
 
     ngOnInit() {
+        this.myName = this.peerService.myPlayerName;
+
         this.peerService.game$
             .pipe(
                 takeUntil(this.destroy$),
@@ -92,6 +101,18 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.snackBar.open(`Connection error: ${msg}`, 'Ok', { duration: 5000 });
                 this.cd.markForCheck();
             });
+
+        this.peerService.playersSubject.subscribe(players => {
+            this.players = players;
+
+            // Берем роль напрямую из сервиса (он уже нашел нас и записал)
+            this.myRole = this.peerService.myRole;
+            this.myTeam = this.peerService.myTeam;
+
+            console.log('[DEBUG] Обновление. Роль из сервиса:', this.myRole, 'Команда:', this.myTeam);
+
+            this.cd.markForCheck();
+        });
     }
 
     ngOnDestroy() {
@@ -120,7 +141,8 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     displaySide(cardIndex: number): Side {
         if (!this.game) return Side.UNKNOWN;
         const card = this.game.board[cardIndex];
-        if (this.isSpymaster || card.uncovered) return card.side;
+        // Заменили this.isSpymaster на проверку роли
+        if (this.myRole === 'spymaster' || card.uncovered) return card.side;
         return Side.UNKNOWN;
     }
 
@@ -130,7 +152,7 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     onCardClick(index: number) {
         if (!this.game) return;
-        if (this.isSpymaster) return;                         // spymasters don't click cards
+        if (this.myRole === 'spymaster') return; // Штабы не кликают по карточкам
         if (!this.game.move.isInited)  return;                // wait for a hint first
         if (this.game.move.isFinished) return;                // turn is over
         if (this.game.isFinished)      return;
@@ -175,6 +197,10 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
         this.navigation.toRules();
     }
 
+    onAssignRolesClick() {
+        this.peerService.assignRoles();
+    }
+
     // ── Log ───────────────────────────────────────────────────────────────────
 
     private updateLog() {
@@ -205,18 +231,18 @@ export class PageP2PBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     get canSendHint(): boolean {
-        if (!this.game || !this.isSpymaster) return false;
+        if (!this.game || this.myRole !== 'spymaster') return false;
         // Spymaster can send a hint when the previous move has been resolved
         return !this.game.isFinished && (!this.game.move.isInited || this.game.move.isFinished);
     }
 
     get canEndTurn(): boolean {
-        if (!this.game || this.isSpymaster) return false;
+        if (!this.game || this.myRole === 'spymaster') return false;
         return this.game.move.isInited && !this.game.move.isFinished && !this.game.isFinished;
     }
 
     get roleLabel(): string {
-        return this.isSpymaster ? 'Spymaster' : 'Operative';
+        return this.myRole === 'spymaster' ? 'Spymaster' : 'Operative';
     }
 
     get connectionBadge(): string {

@@ -9,10 +9,12 @@
 mat-toolbar {
     display: flex;
     flex-direction: column;
+    margin-bottom: 8px;
+    padding: 8px;
 
     grid-column-gap: 0.5rem;
     border-bottom: #e4e4e4 1px solid;
-    height: 156px;
+    height: 356px;
 
     .delimiter {
         border-right: #e4e4e4 1px solid;
@@ -98,7 +100,7 @@ mat-toolbar {
 
 .bottom-panel {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
     gap: 1rem;
     padding: 1rem;
     background: white;
@@ -165,4 +167,12 @@ mat-toolbar {
     flex-direction: row;
     justify-content: space-between;
     width: 100%;
+}
+
+button:disabled {
+    background-color: #cccccc !important; /* Серый фон */
+    color: #666666 !important;            /* Темно-серый текст */
+    opacity: 0.6;                         /* Полупрозрачность */
+    cursor: not-allowed;                  /* Курсор "запрещено" */
+    box-shadow: none !important;          /* Убираем тень, если она есть */
 }

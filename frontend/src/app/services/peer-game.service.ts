@@ -89,6 +89,12 @@ export class PeerGameService implements OnDestroy {
         debug: 2
     };
 
+    public myRole: 'spymaster' | 'operative' | null = null;
+    public myTeam: 'blue' | 'red' | null = null;
+    public players: { name: string, isHost: boolean, role?: 'spymaster' | 'operative', team?: 'blue' | 'red' }[] = [];
+    public playersSubject = new BehaviorSubject<{ name: string, isHost: boolean, role?: 'spymaster' | 'operative', team?: 'blue' | 'red' }[]>([]);
+    public myPlayerName = '';
+
     /** Current game state (null until connected/started). */
     game$ = new BehaviorSubject<P2PGameState | null>(null);
 
@@ -126,9 +132,9 @@ export class PeerGameService implements OnDestroy {
      * HOST: Initialise a PeerJS peer.
      * After `peer.on('open')` fires, the caller can read `localPeerId$`.
      */
-    initAsHost(wordListIndex: number, role: P2PRole) {
+    initAsHost(wordListIndex: number) {
         this.isHost = true;
-        this.role = role;
+        // this.role = role;
         this.currentWordListIndex = wordListIndex;
         this.status$.next('opening');
         this.destroyPeer();
@@ -139,7 +145,13 @@ export class PeerGameService implements OnDestroy {
         this.peer.on('open', (id) => {
             this.localPeerId$.next(id);
             this.status$.next('waiting');
-            // Generate the board so the host can see it right away.
+
+            // ДОБАВЛЯЕМ ХОСТА В СПИСОК
+            const hostName = localStorage.getItem('playerName') || 'Хост';
+            this.myPlayerName = hostName; // <-- ДОБАВЬ
+            this.players = [{ name: hostName, isHost: true }];
+            this.playersSubject.next([...this.players]);
+
             const state = buildInitialState(wordListIndex, this.gameInChain);
             this.game$.next(state);
         });
@@ -159,9 +171,9 @@ export class PeerGameService implements OnDestroy {
     /**
      * JOINER: Connect to the host's peer ID.
      */
-    joinAsGuest(hostPeerId: string, role: P2PRole) {
+    joinAsGuest(hostPeerId: string) {
         this.isHost = false;
-        this.role = role;
+        // this.role = role;
         this.status$.next('connecting');
         this.destroyPeer();
 
@@ -173,6 +185,11 @@ export class PeerGameService implements OnDestroy {
             this.hostConn.on('open', () => {
                 this.connected$.next(true);
                 this.status$.next('connected');
+
+                const playerName = localStorage.getItem('playerName') || 'Гость';
+                this.myPlayerName = playerName; // <-- ДОБАВЬ
+                console.log('[Guest] Отправляю имя:', playerName);
+                this.hostConn!.send({ type: 'PLAYER_JOIN', name: playerName });
             });
 
             this.hostConn.on('data', (raw) => {
@@ -220,6 +237,49 @@ export class PeerGameService implements OnDestroy {
         } else {
             this.sendToHost({ type: 'send_hint', hint, count });
         }
+    }
+
+    private broadcastPlayersUpdate() {
+        const message = { type: 'PLAYERS_UPDATE', players: this.players };
+        this.guestConns.forEach(conn => {
+            if (conn.open) {
+                conn.send(message);
+            }
+        });
+        // Обновляем и себя (хоста), чтобы UI на доске тоже обновился
+        this.playersSubject.next([...this.players]);
+    }
+
+    public assignRoles() {
+        if (!this.isHost) return;
+
+        // 1. Перемешиваем игроков (чтобы команды были случайными)
+        const shuffled = [...this.players].sort(() => Math.random() - 0.5);
+
+        // 2. Назначаем роли и команды
+        const assignedPlayers = shuffled.map((p, index) => {
+            let role: 'spymaster' | 'operative' = 'operative';
+            let team: 'blue' | 'red' = index % 2 === 0 ? 'blue' : 'red';
+
+            // Первые два игрока (после перемешивания) становятся Штабами
+            if (index < 2) {
+                role = 'spymaster';
+            }
+
+            return { ...p, role, team };
+        });
+
+        // 3. Обновляем локальный список (у хоста)
+        this.players = assignedPlayers;
+        this.playersSubject.next([...this.players]);
+
+        // 4. Рассылаем всем гостям новые данные
+        const message = { type: 'ROLES_ASSIGNED', players: this.players };
+        this.guestConns.forEach(conn => {
+            if (conn.open) conn.send(message);
+        });
+
+        console.log('[Host] Роли назначены:', this.players);
     }
 
     /**
@@ -335,6 +395,18 @@ export class PeerGameService implements OnDestroy {
         });
 
         conn.on('data', (raw) => {
+            const msg = raw as any;
+            console.log('[Host] Получил сообщение:', msg);
+
+            // СНАЧАЛА проверяем наши новые сообщения
+            if (msg.type === 'PLAYER_JOIN') {
+                this.players.push({ name: msg.name, isHost: false });
+                this.playersSubject.next([...this.players]); // Отправляем копию массива
+                this.broadcastPlayersUpdate();
+                console.log('[Host] Игрок добавлен:', msg.name);
+                return; // Выходим, чтобы не передавать это в onMessageFromGuest
+            }
+
             this.onMessageFromGuest(raw as P2PMessage, conn);
         });
 
@@ -362,6 +434,28 @@ export class PeerGameService implements OnDestroy {
     private onMessageFromHost(msg: P2PMessage) {
         if (msg.type === 'state_update') {
             this.game$.next(msg.state);
+        }
+
+        if (msg.type === 'PLAYERS_UPDATE') {
+            this.players = msg.players;
+            this.playersSubject.next([...this.players]);
+            return;
+        }
+
+        if (msg.type === 'ROLES_ASSIGNED') {
+            this.players = msg.players;
+
+            // Ищем себя по имени, которое сохранено В САМОМ СЕРВИСЕ (а не в localStorage)
+            const me = this.players.find(p => p.name === this.myPlayerName);
+            if (me) {
+                this.myRole = me.role || null;
+                this.myTeam = me.team || null;
+                console.log('[Guest] Моя роль в сервисе:', this.myRole);
+            }
+
+            // Обновляем подписчиков (компонент доски)
+            this.playersSubject.next([...this.players]);
+            return;
         }
     }
 

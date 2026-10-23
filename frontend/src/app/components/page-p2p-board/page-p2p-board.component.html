@@ -6,8 +6,44 @@
         <button mat-button (click)="onLeaveClick()">Уйти</button>
     </div>
 
+    <div style="position: fixed; top: 0; left: 0; background: yellow; z-index: 9999;">
+        DEBUG: myRole={{ myRole }}, myTeam={{ myTeam }}
+    </div>
+
+    <div class="players-panel">
+        <h3>Игроки ({{ players.length }})</h3>
+        <ul>
+            <li *ngFor="let p of players">
+                {{ p.name }} <span *ngIf="p.isHost">(Хост)</span>
+            </li>
+        </ul>
+        <!-- Кнопка раскидать роли (видна только хосту) -->
+        <button mat-raised-button color="accent" *ngIf="peerService.isHost" (click)="onAssignRolesClick()">
+            Раскидать по ролям
+        </button>
+    </div>
+
+
+    <div class="my-info">
+        Вы: {{ myName }}
+        <span *ngIf="myRole">({{ myRole === 'spymaster' ? 'Штаб' : 'Оперативник' }}, {{ myTeam === 'blue' ? 'Синие' : 'Красные' }})</span>
+    </div>
+
+    <div>
+        <ul>
+            <li *ngFor="let p of players">
+                {{ p.name }}
+                <span *ngIf="p.isHost">(Хост)</span>
+                <span *ngIf="p.role"> — {{ p.role === 'spymaster' ? 'Штаб' : 'Оперативник' }}, {{ p.team === 'blue' ? 'Синие' : 'Красные' }}</span>
+            </li>
+        </ul>
+    </div>
+
     <!-- Connection info -->
     <div class="stat">
+
+        <div class="my-name">Вы: {{ myName }}</div>
+
         <span class="badge" [class.badge-host]="isHost" [class.badge-guest]="!isHost">
             {{connectionBadge}}
         </span>
@@ -40,20 +76,20 @@
     *ngIf="game && !game.isFinished">
 
     <span *ngIf="!game.move.isInited">
-        Waiting for the <strong>{{game.move.side === SIDE_RED ? 'Red' : 'Blue'}}</strong> Spymaster's clue
+        ЖДЁМ ПОДСКАЗКУ ОТ <strong>{{game.move.side === SIDE_RED ? 'Red' : 'Blue'}}</strong> ШТАБА
     </span>
     <span *ngIf="game.move.isInited && !game.move.isFinished">
         <strong>{{game.move.side === SIDE_RED ? 'Red' : 'Blue'}}</strong> team's turn
-        · Clue: <strong>«{{game.move.hint}}»</strong>
-        · Guesses left: <strong>{{game.move.count}}</strong>
+        · Подсказка: <strong>«{{game.move.hint}}»</strong>
+        · Осталось подсказок: <strong>{{game.move.count}}</strong>
     </span>
     <span *ngIf="game.move.isInited && game.move.isFinished && !game.isFinished">
-        Turn over. Waiting for the <strong>{{nextHintSide === SIDE_RED ? 'Red' : 'Blue'}}</strong> Spymaster's clue
+        Ход закончен. Ждём <strong>{{nextHintSide === SIDE_RED ? 'Red' : 'Blue'}}</strong> штаб
     </span>
 </div>
 
 <div class="game-over-banner" role="alert" aria-live="assertive" *ngIf="game?.isFinished">
-    Game Over!
+    GG!
 </div>
 
 <!-- Board -->
@@ -78,16 +114,16 @@
 <div class="bottom-panel">
 
     <!-- Spymaster hint form -->
-    <div class="hint-section" *ngIf="isSpymaster">
-        <div class="hint-title mat-h3">Send Clue</div>
+    <div class="hint-section" *ngIf="myRole === 'spymaster'">
+        <div class="hint-title mat-h3">Отправить подсказку</div>
         <div class="hint-form">
             <mat-form-field appearance="outline" class="hint-word-field">
-                <mat-label>Word</mat-label>
-                <input matInput [formControl]="hintControl" placeholder="enter a word"
+                <mat-label>Напиши ОДНО слово</mat-label>
+                <input matInput [formControl]="hintControl" placeholder="скорее пиши!!!1"
                     (keydown.enter)="onSendHintClick()">
             </mat-form-field>
             <mat-form-field appearance="outline" class="hint-count-field">
-                <mat-label>Number (0 = ∞)</mat-label>
+                <mat-label>кол-во ( от 0 до ∞)</mat-label>
                 <input matInput type="number" min="0" max="9" [formControl]="hintCountControl">
             </mat-form-field>
             <button mat-raised-button
@@ -95,7 +131,7 @@
                 [class.send-button-red]="nextHintSide === SIDE_RED"
                 [disabled]="!canSendHint"
                 (click)="onSendHintClick()">
-                Send
+                Отправить
             </button>
         </div>
     </div>
@@ -103,17 +139,16 @@
     <!-- End-turn button for operatives -->
     <div class="end-turn-section" *ngIf="!isSpymaster">
         <button mat-stroked-button [disabled]="!canEndTurn" (click)="onEndTurnClick()">
-            End Turn
+            Завершить ход
         </button>
     </div>
 
     <!-- Game log -->
     <div class="game-log">
-        <div class="mat-h3">HQ Dispatch</div>
+        <div class="mat-h3">Лог шифровок</div>
         <div class="messages-area">
             <div class="muted" *ngIf="log.length === 0">
-                Headquarters is silent.
-                <small>The Spymaster must send a clue before Operatives can start uncovering agents.</small>
+                ШТАБ ДОЛЖЕН НЕ ПОДСКАЗЫВАТЬ
             </div>
             <div *ngFor="let turn of log" class="turn">
                 <div *ngFor="let item of turn; let i = index"
