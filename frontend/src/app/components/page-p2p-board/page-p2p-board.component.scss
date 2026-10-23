@@ -7,8 +7,9 @@
 }
 
 mat-toolbar {
-    display: grid;
-    grid-template-columns: repeat(3, auto) 1fr repeat(3, auto);
+    display: flex;
+    flex-direction: column;
+
     grid-column-gap: 0.5rem;
     border-bottom: #e4e4e4 1px solid;
     height: 156px;
@@ -157,4 +158,11 @@ mat-toolbar {
     &.log-blue    { background: #bbdefb; color: #0d47a1; }
     &.log-assassin{ background: #424242; color: white; }
     &.log-neutral { background: #ffe0b2; color: #5d4037; }
+}
+
+.score-lines {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
 }

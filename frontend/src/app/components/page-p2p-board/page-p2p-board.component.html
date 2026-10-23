@@ -1,9 +1,10 @@
 <mat-toolbar>
-    <!-- Left side: game controls -->
-    <button mat-button color="primary" (click)="onNewGameClick()">Новая игра</button>
-    <button mat-button (click)="onLeaveClick()">Уйти</button>
 
-    <div class="delimiter"></div>
+    <div>
+        <!-- Left side: game controls -->
+        <button mat-button color="primary" (click)="onNewGameClick()">Новая игра</button>
+        <button mat-button (click)="onLeaveClick()">Уйти</button>
+    </div>
 
     <!-- Connection info -->
     <div class="stat">
@@ -18,17 +19,16 @@
 
     <div class="spacer"><!-- spacer --></div>
 
-    <button class="help-btn" mat-icon-button (click)="onHelpClick()" aria-label="Game rules">
-        <span class="material-icons" aria-hidden="true">help_outline</span>
-    </button>
-
     <!-- Scores -->
-    <div class="score score-blues" aria-live="polite" [attr.aria-label]="'Blue remaining: ' + (game?.blueLeft || 0)">
-        <span class="mat-h1" aria-hidden="true"><strong>{{game?.blueLeft || 0}}</strong></span>
+    <div class="score-lines">
+        <div class="score score-blues" aria-live="polite" [attr.aria-label]="'Blue remaining: ' + (game?.blueLeft || 0)">
+            <span class="mat-h1" aria-hidden="true"><strong>{{game?.blueLeft || 0}}</strong></span>
+        </div>
+        <div class="score score-reds" aria-live="polite" [attr.aria-label]="'Red remaining: ' + (game?.redLeft || 0)">
+            <span class="mat-h1" aria-hidden="true"><strong>{{game?.redLeft || 0}}</strong></span>
+        </div>
     </div>
-    <div class="score score-reds" aria-live="polite" [attr.aria-label]="'Red remaining: ' + (game?.redLeft || 0)">
-        <span class="mat-h1" aria-hidden="true"><strong>{{game?.redLeft || 0}}</strong></span>
-    </div>
+
 </mat-toolbar>
 
 <!-- Turn indicator -->
