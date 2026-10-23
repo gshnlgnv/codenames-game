@@ -92,6 +92,7 @@ export class PeerGameService implements OnDestroy {
     public myRole: 'spymaster' | 'operative' | null = null;
     public myTeam: 'blue' | 'red' | null = null;
     public players: { name: string, isHost: boolean, role?: 'spymaster' | 'operative', team?: 'blue' | 'red' }[] = [];
+    // tslint:disable-next-line:max-line-length
     public playersSubject = new BehaviorSubject<{ name: string, isHost: boolean, role?: 'spymaster' | 'operative', team?: 'blue' | 'red' }[]>([]);
     public myPlayerName = '';
 
@@ -173,41 +174,45 @@ export class PeerGameService implements OnDestroy {
      */
     joinAsGuest(hostPeerId: string) {
         this.isHost = false;
-        // this.role = role;
         this.status$.next('connecting');
         this.destroyPeer();
 
-        this.peer = new Peer(this.peerOptions);
+        // 1. Создаем Peer и сохраняем в локальную переменную
+        const peer = new Peer(this.peerOptions);
+        this.peer = peer;
 
-        this.peer.on('open', () => {
-            this.hostConn = this.peer!.connect(hostPeerId, { reliable: true });
+        peer.on('open', () => {
+            // 2. Используем локальную переменную peer
+            const conn = peer.connect(hostPeerId, { reliable: true });
+            this.hostConn = conn;
 
-            this.hostConn.on('open', () => {
+            conn.on('open', () => {
                 this.connected$.next(true);
                 this.status$.next('connected');
 
                 const playerName = localStorage.getItem('playerName') || 'Гость';
-                this.myPlayerName = playerName; // <-- ДОБАВЬ
+                this.myPlayerName = playerName;
                 console.log('[Guest] Отправляю имя:', playerName);
-                this.hostConn!.send({ type: 'PLAYER_JOIN', name: playerName });
+
+                conn.send({ type: 'PLAYER_JOIN', name: playerName });
             });
 
-            this.hostConn.on('data', (raw) => {
+            conn.on('data', (raw) => {
                 this.onMessageFromHost(raw as P2PMessage);
             });
 
-            this.hostConn.on('error', (err) => {
+            conn.on('error', (err) => {
                 console.error('[PeerGameService] conn error', err);
                 this.error$.next(`Connection error: ${err.message ?? err}`);
             });
 
-            this.hostConn.on('close', () => {
+            conn.on('close', () => {
                 this.connected$.next(false);
                 this.status$.next('disconnected');
             });
         });
 
-        this.peer.on('error', (err) => {
+        peer.on('error', (err) => {
             console.error('[PeerGameService] peer error', err);
             this.error$.next(`PeerJS error: ${err.message ?? err}`);
         });
@@ -259,7 +264,7 @@ export class PeerGameService implements OnDestroy {
         // 2. Назначаем роли и команды
         const assignedPlayers = shuffled.map((p, index) => {
             let role: 'spymaster' | 'operative' = 'operative';
-            let team: 'blue' | 'red' = index % 2 === 0 ? 'blue' : 'red';
+            const team: 'blue' | 'red' = index % 2 === 0 ? 'blue' : 'red';
 
             // Первые два игрока (после перемешивания) становятся Штабами
             if (index < 2) {
